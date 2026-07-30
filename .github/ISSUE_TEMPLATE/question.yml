@@ -1,0 +1,22 @@
+name: Question or idea
+description: Help getting it running, adapting it to another board, or a suggestion
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Adapting this to a different ESP32 + ST7789 board is expected — the pin
+        mappings and TFT_eSPI settings are all passed via `build_flags` in
+        `platformio.ini`, so you shouldn't need to edit the library's `User_Setup.h`.
+
+        `docs/DESIGN_SPEC.md` covers the auth flow, heap budget and rate-limit
+        strategy in full if you're trying to understand *why* something works
+        the way it does.
+
+  - type: textarea
+    id: body
+    attributes:
+      label: What would you like to know?
+    validations:
+      required: true

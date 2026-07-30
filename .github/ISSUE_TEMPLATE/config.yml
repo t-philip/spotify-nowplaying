@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Design specification
+    url: https://github.com/t-philip/spotify-nowplaying/blob/main/docs/DESIGN_SPEC.md
+    about: Auth flow, heap budget, rate-limit strategy, and every known deviation (§0.1).
+  - name: Other projects
+    url: https://github.com/t-philip
+    about: Browse the rest of the projects.

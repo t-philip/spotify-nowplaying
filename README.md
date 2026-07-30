@@ -104,6 +104,21 @@ If you're building anything similar, these two cost real debugging time:
    request write both succeed; the CDN simply never replies, which presents as a read
    timeout. The identical URL fetches instantly from a browser or `curl`.
 
+## Reporting issues
+
+Found a bug, a mistake in the documentation, or want to suggest something?
+**[Open an issue](https://github.com/t-philip/spotify-nowplaying/issues/new/choose)** — pick a
+template and it will ask for the details that actually help.
+
+Worth checking first: **[`docs/DESIGN_SPEC.md`](docs/DESIGN_SPEC.md) §0.1 lists
+every known deviation from the design**, including one requirement that isn't
+implemented — what you're seeing may already be documented there.
+
+The bug template asks for your `http://ideaspeak.local/healthz` output. Please
+use that rather than a serial log: opening the serial port on this board
+asserts DTR/RTS and **resets the device**, which hides the fault you're trying
+to capture.
+
 ---
 
 Built and maintained by [t-philip](https://github.com/t-philip).
