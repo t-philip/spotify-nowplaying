@@ -16,7 +16,7 @@ Licensed under [GPL-3.0](LICENSE). Please credit **t-philip** if you use or shar
 
 - **Live now-playing** — album art (JPEG, decoded on-device), scrolling title/artist/album, progress bar
 - **Web dashboard** at `http://ideaspeak.local` — play/pause, next/previous, backlight, orientation
-- **Portrait and landscape** layouts, switchable at runtime
+- **Portrait and landscape** layouts, switchable from the dashboard (the device reboots to apply)
 - **PKCE authentication** against your own Spotify app registration — no client secret on the device
 - **Crash-safe token rotation** — A/B refresh-token slots in NVS, so a power cut mid-refresh cannot brick auth
 - **Layered rate-limit protection** — adaptive polling, backoff, and a hard request ceiling
@@ -83,8 +83,12 @@ src/
 └── util/      base64url, CRC32, UTF-8 helpers
 ```
 
-A full design specification covering the auth flow, heap budget, rate-limit strategy
-and error-handling matrix will be published in this repository.
+The full design specification is in **[`docs/DESIGN_SPEC.md`](docs/DESIGN_SPEC.md)** —
+the auth flow, heap budget, rate-limit strategy, failure-mode matrix and acceptance
+criteria. It has been reconciled against the shipped firmware, so §0.1 lists every place
+the build deviates from the original design and why, **including one requirement that is
+not met**. It also records which acceptance criteria have actually been verified and which
+have not.
 
 ## Two findings worth knowing
 
