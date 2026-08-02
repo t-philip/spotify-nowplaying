@@ -6,6 +6,9 @@
 **Author:** T. Philip — <https://github.com/t-philip>
 **v1.0:** 28 July 2026 — approved for build
 **v1.1:** 30 July 2026 — reconciled against the shipped firmware
+**v1.1 update:** 2 August 2026 — `/healthz` gained 4 fields (`app_state_name`,
+`boot_count`, `reset_reason`, `min_free_heap`) and the F16 Safe Mode display bug they
+were prompted by is documented and fixed (§0.1 #7, §14)
 **Status:** Built and verified on hardware. This document describes what the firmware
 actually does, not only what was planned.
 
@@ -37,7 +40,7 @@ Each is also commented at its site in the source.
 | 4 | §11.2, §15, F10 | Album-art size cap raised **48 KB → 96 KB**. | v1.0's 48 KB was an estimate. Measured against the live CDN, a real 300 px-tier cover came back at 60,378 bytes and was rejected — so the placeholder tile showed on *every* track. Free heap measured ~150 KB at the time, so 96 KB preserves the same margin v1.0 was reasoning about, against observed sizes rather than estimated ones. |
 | 5 | §12.1 | **Landscape layout added** alongside v1.0's portrait-only geometry, selectable from the dashboard. | Requested after the first build. Geometry moved into `ui/layout.*` instead of being hardcoded. |
 | 6 | §13.1 | `/api/settings` also accepts `client_id` and `orientation`. | v1.0 gave the Client ID no route of its own, and orientation did not exist. `/api/settings` doubles as the general PIN-gated settings write. |
-| 7 | §13.1 | `/healthz` exposes seven additional album-art diagnostic fields. | Opening the serial port on this board asserts DTR/RTS and **resets it**, so serial is not usable for live diagnosis. HTTP became the only practical channel. No secret is exposed — §13.3 still holds. |
+| 7 | §13.1 | `/healthz` exposes eleven additional diagnostic fields beyond v1.0's baseline five, expanded to fifteen on 2 Aug 2026. | Opening the serial port on this board asserts DTR/RTS and **resets it**, so serial is not usable for live diagnosis. HTTP became the only practical channel. No secret is exposed — §13.3 still holds. The 2 Aug expansion (`app_state_name`, `boot_count`, `reset_reason`, `min_free_heap`) was prompted by a real incident: the F16 Safe Mode indicator (`AppState::SAFE_MODE`) was being silently overwritten by `WifiMgr::begin()`'s own `setState(WIFI_INIT)` call, so a device correctly idling in crash-loop-safe mode displayed "Connecting to WiFi..." indefinitely and `/healthz` had no direct field to reveal *why* — diagnosis required cross-referencing several unrelated fields by hand. That display bug is also fixed (§14, F16). |
 | 8 | §16 | NVS key `orientation` added. | Supports deviation 5. |
 | 9 | §2.4 | **NOT IMPLEMENTED: the factory-reset on-screen countdown.** v1.0 says this MUST exist. | The abort-by-release requirement *is* met — releasing the BOOT button before 10 s cancels, and the reset only fires after the full hold. But nothing is drawn during the hold, so the user gets no visual warning. This is a genuine open gap, not a deliberate trade-off. |
 | 10 | §12.2 | Continuous-wrap scrolling only; no pause-and-reverse mode. | v1.0 offered both and stated a preference for continuous wrap. `SCROLL_END_PAUSE_MS` is vestigial. |
@@ -867,7 +870,7 @@ Served on port 80 by the synchronous `WebServer`, polled from `uiTask`. Discover
 | POST | `/auth/complete` | PIN | Accept pasted redirect URL or bare code |
 | POST | `/api/settings` | PIN | Poll interval, brightness, art on/off, **`client_id`**, **`orientation`** |
 | POST | `/api/reset` | PIN | Wipe NVS, reboot |
-| GET | `/healthz` | — | Uptime, free heap, WiFi RSSI, token expiry (seconds remaining only), request rate, **art diagnostics** |
+| GET | `/healthz` | — | Uptime, free heap (current + low watermark), WiFi RSSI, token expiry (seconds remaining only), request rate, **app-state / boot / reset diagnostics**, **art diagnostics** |
 
 **As-built (§0.1 #6):** v1.0 gave the Spotify Client ID no route of its own, so
 `/api/settings` doubles as the general PIN-gated settings write and accepts `client_id`
@@ -883,6 +886,17 @@ live fault — during bring-up that behaviour also manufactured a false "stuck o
 to WiFi" symptom. HTTP is the only practical diagnostic channel. None of these fields is a
 secret and §13.3 is unaffected. `/healthz` is deliberately unauthenticated, so it must
 remain LAN-only like the rest of the device.
+
+**Added 2 Aug 2026, prompted by the F16 Safe Mode display bug (§14):**
+
+| Field | Meaning |
+|---|---|
+| `app_state_name` | Human-readable mirror of `app_state` (e.g. `"RUNNING"`, `"SAFE_MODE"`) — avoids cross-referencing `app_state.h`'s enum ordinals by hand |
+| `boot_count` | Current NVS boot counter; resets to 0 after `BOOT_COUNT_CLEAR_UPTIME_MS` (5 min) of stable uptime — shows proximity to F16's `BOOT_LOOP_MAX_COUNT` (5) |
+| `reset_reason` | `esp_reset_reason()`, named (`POWERON`, `SOFTWARE`, `PANIC`, `TASK_WDT`, `BROWNOUT`, etc.) — previously invisible without serial access |
+| `min_free_heap` | Lowest free-heap watermark since boot (`ESP.getMinFreeHeap()`), alongside the existing current-heap `free_heap` — surfaces slow leaks before they trip F12/crash |
+
+None of these four is a secret either; the same §13.3 guarantee and LAN-only requirement apply.
 
 `/api/now` MUST be served from the cached `PlayerState` — it **MUST NOT** trigger a Spotify request. Otherwise every open browser tab multiplies the API load, which defeats §6 entirely.
 
@@ -928,6 +942,8 @@ The device sits on a trusted home LAN, but "trusted" is not "unauthenticated".
 | F16 | Crash loop | Boot counter in NVS; 5 boots in 5 min | Safe mode: WiFi + web UI only, **no Spotify traffic** | "Safe mode" + URL |
 
 **F16 is the safety net for §6.3(b).** A crash loop that also polls Spotify on every boot is the realistic path to getting the client blocked. Safe mode must engage before that can accumulate.
+
+**As-built bug, found and fixed 2 Aug 2026:** the "Safe mode" screen text this table promises was not actually reachable. `main.cpp`'s safe-mode branch set `AppState::SAFE_MODE` and then immediately called `WifiMgr::begin()`, whose first statement unconditionally sets `AppState::WIFI_INIT` — silently clobbering the state just set, with nothing restoring it afterward. A device that had correctly entered Safe Mode (WiFi connected, web UI serving, no Spotify traffic) displayed "Connecting to WiFi..." forever instead, on both the TFT and `/healthz`. Fixed by moving the `setState(AppState::SAFE_MODE)` call to *after* `WifiMgr::begin()` returns. See §0.1 #7 for the related `/healthz` field additions this incident prompted.
 
 ---
 
