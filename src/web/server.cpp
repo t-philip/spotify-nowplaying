@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
+#include <esp_system.h>
 #include "pages.h"
 #include "../config.h"
 #include "../app_state.h"
@@ -255,10 +256,51 @@ void handleApiReset() {
   ESP.restart();
 }
 
+// Human-readable mirror of AppState so a raw JSON response doesn't require
+// cross-referencing app_state.h to interpret — the numeric app_state field
+// is kept alongside it for anything that wants to switch on it programmatically.
+const char* appStateName(AppState s) {
+  switch (s) {
+    case AppState::BOOT:            return "BOOT";
+    case AppState::WIFI_INIT:       return "WIFI_INIT";
+    case AppState::WIFI_SETUP:      return "WIFI_SETUP";
+    case AppState::TIME_SYNC:       return "TIME_SYNC";
+    case AppState::AUTH_CHECK:      return "AUTH_CHECK";
+    case AppState::AUTH_NEEDED:     return "AUTH_NEEDED";
+    case AppState::RUNNING:         return "RUNNING";
+    case AppState::RATE_LIMITED:    return "RATE_LIMITED";
+    case AppState::ERROR_TRANSIENT: return "ERROR_TRANSIENT";
+    case AppState::SAFE_MODE:       return "SAFE_MODE";
+    default:                        return "UNKNOWN";
+  }
+}
+
+// Why the last boot happened — not available at all without this, and the
+// single most useful signal for telling "crashed" apart from "lost power"
+// apart from "watchdog killed a hung task" without serial access.
+const char* resetReasonName(esp_reset_reason_t r) {
+  switch (r) {
+    case ESP_RST_POWERON:   return "POWERON";
+    case ESP_RST_EXT:       return "EXTERNAL_PIN";
+    case ESP_RST_SW:        return "SOFTWARE";       // e.g. our own ESP.restart()
+    case ESP_RST_PANIC:     return "PANIC";
+    case ESP_RST_INT_WDT:   return "INTERRUPT_WDT";
+    case ESP_RST_TASK_WDT:  return "TASK_WDT";       // esp_task_wdt_add() timeout
+    case ESP_RST_WDT:       return "OTHER_WDT";
+    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP_WAKE"; // unused by this firmware
+    case ESP_RST_BROWNOUT:  return "BROWNOUT";       // undersized/flaky power supply
+    case ESP_RST_SDIO:      return "SDIO";
+    default:                return "UNKNOWN";        // covers UNKNOWN plus any
+                                                       // IDF-version-specific reason
+                                                       // not enumerated above
+  }
+}
+
 void handleHealthz() {
   AppStatus app = AppStateStore::snapshot();
   JsonDocument doc;
   doc["free_heap"] = ESP.getFreeHeap();
+  doc["min_free_heap"] = ESP.getMinFreeHeap(); // lowest watermark since boot — catches slow leaks before they crash it
   doc["rssi"] = app.wifiRssiDbm;
   doc["uptime_ms"] = millis();
   doc["requests_last_minute"] = Spotify::RateLimit::requestsInLastMinute();
@@ -268,6 +310,9 @@ void handleHealthz() {
   // on-device debugging without destroying the state you're trying to
   // observe. Kept permanently, not scaffolding left over from one bug.
   doc["app_state"] = (int)app.state;
+  doc["app_state_name"] = appStateName(app.state);
+  doc["boot_count"] = Nvs::getBootCount();       // resets to 0 after BOOT_COUNT_CLEAR_UPTIME_MS of stable uptime; see F16/BOOT_LOOP_MAX_COUNT
+  doc["reset_reason"] = resetReasonName(esp_reset_reason());
   doc["retry_until_epoch"] = Nvs::getRetryUntilEpoch();
   doc["now_epoch"] = (uint32_t)time(nullptr);
   doc["auth_needed"] = Spotify::Auth::isAuthNeeded();
