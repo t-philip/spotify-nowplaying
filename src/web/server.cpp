@@ -263,8 +263,10 @@ void handleHealthz() {
   doc["uptime_ms"] = millis();
   doc["requests_last_minute"] = Spotify::RateLimit::requestsInLastMinute();
   doc["token_expires_in_s"] = Spotify::Auth::accessTokenExpiresInSeconds();
-  // Temporary diagnostics (not secrets) to track down the stuck-polling
-  // issue without needing serial access, which resets the board.
+  // Deliberate diagnostics (not secrets) — this board resets whenever its
+  // serial port is opened, so /healthz is the only practical channel for
+  // on-device debugging without destroying the state you're trying to
+  // observe. Kept permanently, not scaffolding left over from one bug.
   doc["app_state"] = (int)app.state;
   doc["retry_until_epoch"] = Nvs::getRetryUntilEpoch();
   doc["now_epoch"] = (uint32_t)time(nullptr);
