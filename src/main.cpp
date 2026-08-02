@@ -55,8 +55,14 @@ void netTaskFn(void* /*pv*/) {
                                    : AppState::RUNNING);
     }
   } else {
-    AppStateStore::setState(AppState::SAFE_MODE);
+    // WifiMgr::begin() unconditionally sets state to WIFI_INIT as its first
+    // statement, so setting SAFE_MODE before calling it gets silently
+    // clobbered and never restored — the TFT/`/healthz` would then show
+    // "Connecting to WiFi..." forever instead of "Safe mode", even though
+    // WiFi is up and the device is correctly idling in the crash-loop-safe
+    // WiFi+web-only mode. Set it after begin() returns instead.
     WifiMgr::begin(); // F16: WiFi + web UI only, no Spotify traffic below
+    AppStateStore::setState(AppState::SAFE_MODE);
   }
 
   // Registered only now, after any long blocking calls above (WiFiManager's
