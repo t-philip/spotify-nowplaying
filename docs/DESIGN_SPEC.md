@@ -1116,8 +1116,16 @@ trigger a Spotify request.
 
 ## 21. Licence and provenance
 
-This specification is published alongside the firmware it describes, under **GPL-3.0**,
+This specification is published alongside the firmware it describes, under **AGPL-3.0**,
 so the design reasoning is available and not only the code.
+
+**Licence history.** This repository was published under GPL-3.0 until 2026-08-06, when
+it was relicensed to AGPL-3.0. The change adds §13 (Remote Network Interaction): anyone
+who modifies this code and makes it available to users over a network must offer those
+users the corresponding source — relevant to the web dashboard this firmware exposes.
+Copyright is held solely by T. Philip, so the change was made without third-party
+consent. Releases already published under GPL-3.0 remain available under GPL-3.0 to
+anyone who received them — that grant is not revocable.
 
 Written and built by **T. Philip** — <https://github.com/t-philip>.
 Firmware: <https://github.com/t-philip/spotify-nowplaying>

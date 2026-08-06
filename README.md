@@ -8,7 +8,9 @@ It is **not** a Spotify Connect target. It observes and controls playback happen
 on your *other* devices (phone, desktop, speaker), which means it needs no audio
 hardware and works with whatever you're already listening on.
 
-Licensed under [GPL-3.0](LICENSE). Please credit **t-philip** if you use or share this.
+Licensed under [AGPL-3.0](LICENSE). Please credit **t-philip** if you use or share this.
+If you modify it and make it available to others over a network, you must offer those
+users the source of your modified version.
 
 ---
 
