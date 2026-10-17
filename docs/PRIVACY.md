@@ -2,9 +2,9 @@
 
 This is a public repository belonging to a personal project. The code and its
 comments are written from a working installation, which is what makes them
-worth reading — and is also how a specific home's network, devices, dates or
-occupants can end up published. That has happened before in a sibling repo,
-twice, in comments nobody thought were sensitive while writing them.
+worth reading — and is also how a working installation's network, devices, dates or
+occupants can end up described in public. Such leaks happen in comments nobody
+thought were sensitive while writing them.
 
 ## The rule
 
@@ -20,9 +20,9 @@ The test to apply to any line you are about to write:
 > *Could this have been written by someone who has never seen the author's
 > home or network?*
 
-Generalising costs nothing. "A multi-week absence can run at 0.03–0.08 m³/day"
+Generalising costs nothing. "A multi-hour outage can show 0.1–0.3% packet loss"
 says everything a reader needs; naming when it happened only tells them about
-one house. In practice the general form reads better, because it states the
+one installation. In practice the general form reads better, because it states the
 behaviour rather than an anecdote nobody else can verify.
 
 ## Where the specific detail goes instead
@@ -60,7 +60,7 @@ repo. Private vocabulary goes in the untracked `.privacy-denylist.private` inste
 **Semantic** — a read of the diff by someone, or something, with no memory of
 writing it, answering the one question above.
 
-The second is not optional. Both real leaks were phrases no denylist would
+The second is not optional. Real leaks tend to be phrases no denylist would
 have held in advance. A single quoted proper noun in particular cannot be
 distinguished mechanically from a column label without flagging every
 capitalised string in the codebase.
