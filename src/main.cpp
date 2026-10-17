@@ -128,8 +128,7 @@ void netTaskFn(void* /*pv*/) {
         // after Next/Previous/Play/Pause) updates PlayerStateStore on its
         // own schedule, so by the time the next "due" poll ran, the
         // before/after comparison there had already gone stale and the
-        // art fetch for that track was silently skipped forever (confirmed
-        // on hardware: clicking Next left the old cover on screen
+        // art fetch for that track was silently skipped forever (clicking Next left the old cover on screen
         // indefinitely). Comparing against this dedicated tracker instead
         // of a per-iteration snapshot catches the change on whichever
         // iteration first observes it, regardless of source.

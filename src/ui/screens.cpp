@@ -340,7 +340,7 @@ void renderRunning() {
       // Leaving IDLE_NO_PLAYBACK: drawNowPlaying() only repaints its own
       // small text bands, never the whole screen, so without this the
       // idle clock's "Nothing playing" / date / time text is left behind
-      // underneath the new content (confirmed on hardware — leftover text
+      // underneath the new content (leftover text
       // visible around the Now Playing bands after a track starts).
       if (Display::lock()) {
         Display::tft().fillScreen(COLOR_BG);

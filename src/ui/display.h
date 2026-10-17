@@ -11,8 +11,7 @@ namespace Display {
 // rotation 0 = portrait (§2.3 default, 135x240); rotation 1 = landscape
 // (240x135). Rotation 1 is a first guess for this board's landscape
 // direction — if the image comes up mirrored/upside-down, try rotation 3
-// instead (net effect of CGRAM_OFFSET + physical mounting can't be verified
-// without the board in hand).
+// instead (the net effect of CGRAM_OFFSET and the physical mounting depends on the board).
 void begin(Orientation orientation);
 
 // Access to the shared TFT_eSPI instance. Per §8.1, uiTask owns rendering —

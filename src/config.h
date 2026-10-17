@@ -138,11 +138,10 @@ constexpr size_t FIELD_MAX_ART_URL = 160;
 
 // ---- Album art pipeline (§11) -----------------------------------------------
 // §11.2 originally specified a 48KB cap sized against a no-PSRAM heap
-// budget of ~150-190KB. Measured against live Spotify CDN responses
-// (2026-07-29): a real 300px-tier JPEG came back at 60,378 bytes,
-// comfortably over 48KB, and got rejected — showing the placeholder tile
-// on every track instead of real art. On-device /healthz showed ~150KB
-// free heap at the time, so raising the cap is safe; 96KB leaves the same
+// budget of ~150-190KB. Real 300px-tier covers from the Spotify CDN can exceed 60KB, so the
+// original 48KB cap rejected them — showing the placeholder tile
+// on every track instead of real art. Free heap is typically ~150KB,
+// so raising the cap is safe; 96KB leaves the same
 // kind of margin the original 48KB figure was reasoning about, just against
 // the sizes actually observed rather than the spec's estimate.
 constexpr size_t   ART_MAX_CONTENT_LENGTH = 96UL * 1024UL;

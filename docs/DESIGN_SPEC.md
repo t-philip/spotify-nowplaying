@@ -6,7 +6,7 @@
 **Author:** T. Philip — <https://github.com/t-philip>
 **v1.0:** 28 July 2026 — approved for build
 **v1.1:** 30 July 2026 — reconciled against the shipped firmware
-**v1.1 update:** 2 August 2026 — `/healthz` gained 4 fields (`app_state_name`,
+**v1.1 update:** `/healthz` gained 4 fields (`app_state_name`,
 `boot_count`, `reset_reason`, `min_free_heap`) and the F16 Safe Mode display bug they
 were prompted by is documented and fixed (§0.1 #7, §14)
 **Status:** Built and verified on hardware. This document describes what the firmware
@@ -37,10 +37,10 @@ Each is also commented at its site in the source.
 | 1 | §3.1 | Added `ricmoo/QRCode` to `lib_deps`. | §12.5 requires a QR code on the `AUTH_NEEDED` screen, but v1.0's dependency list contained nothing that could generate one. |
 | 2 | §8.1 | `uiTask` is **not** a created task — Arduino's own `loop()` is `uiTask`. | `loop()` already runs pinned to core 1 at priority 1, exactly what the table asked for. Creating a second task to do the same thing would have cost another stack for no benefit. Consequence: `UI_TASK_STACK` / `UI_TASK_PRIORITY` / `UI_TASK_CORE` in `config.h` are vestigial and unreferenced. |
 | 3 | §8.1 | Added a **display mutex**; album art is drawn directly by `netTask` rather than handed to `uiTask` as a buffer. | v1.0 assigned art *decode* to `netTask` while all other rendering belonged to `uiTask`, but both drive the same SPI bus and v1.0 specified nothing to serialise them. A mutex is cheaper than a 25 KB ownership handover on a no-PSRAM board. |
-| 4 | §11.2, §15, F10 | Album-art size cap raised **48 KB → 96 KB**. | v1.0's 48 KB was an estimate. Measured against the live CDN, a real 300 px-tier cover came back at 60,378 bytes and was rejected — so the placeholder tile showed on *every* track. Free heap measured ~150 KB at the time, so 96 KB preserves the same margin v1.0 was reasoning about, against observed sizes rather than estimated ones. |
+| 4 | §11.2, §15, F10 | Album-art size cap raised **48 KB → 96 KB**. | v1.0's 48 KB was an estimate. A representative 300 px-tier cover is about 60 KB and was rejected, so the placeholder tile showed on *every* track. Free heap is typically ~150 KB, so 96 KB preserves the same margin v1.0 was reasoning about, against observed sizes rather than estimated ones. |
 | 5 | §12.1 | **Landscape layout added** alongside v1.0's portrait-only geometry, selectable from the dashboard. | Requested after the first build. Geometry moved into `ui/layout.*` instead of being hardcoded. |
 | 6 | §13.1 | `/api/settings` also accepts `client_id` and `orientation`. | v1.0 gave the Client ID no route of its own, and orientation did not exist. `/api/settings` doubles as the general PIN-gated settings write. |
-| 7 | §13.1 | `/healthz` exposes eleven additional diagnostic fields beyond v1.0's baseline five, expanded to fifteen on 2 Aug 2026. | Opening the serial port on this board asserts DTR/RTS and **resets it**, so serial is not usable for live diagnosis. HTTP became the only practical channel. No secret is exposed — §13.3 still holds. The 2 Aug expansion (`app_state_name`, `boot_count`, `reset_reason`, `min_free_heap`) was prompted by a real incident: the F16 Safe Mode indicator (`AppState::SAFE_MODE`) was being silently overwritten by `WifiMgr::begin()`'s own `setState(WIFI_INIT)` call, so a device correctly idling in crash-loop-safe mode displayed "Connecting to WiFi..." indefinitely and `/healthz` had no direct field to reveal *why* — diagnosis required cross-referencing several unrelated fields by hand. That display bug is also fixed (§14, F16). |
+| 7 | §13.1 | `/healthz` exposes eleven additional diagnostic fields beyond v1.0's baseline five. | Opening the serial port on this board asserts DTR/RTS and **resets it**, so serial is not usable for live diagnosis. HTTP became the only practical channel. No secret is exposed — §13.3 still holds. The later additions (`app_state_name`, `boot_count`, `reset_reason`, `min_free_heap`) make device state diagnosable without cross-referencing fields by hand: the F16 Safe Mode indicator (`AppState::SAFE_MODE`) was being silently overwritten by `WifiMgr::begin()`'s own `setState(WIFI_INIT)` call, so a device correctly idling in crash-loop-safe mode displayed "Connecting to WiFi..." indefinitely. That display bug is also fixed (§14, F16). |
 | 8 | §16 | NVS key `orientation` added. | Supports deviation 5. |
 | 9 | §2.4 | **NOT IMPLEMENTED: the factory-reset on-screen countdown.** v1.0 says this MUST exist. | The abort-by-release requirement *is* met — releasing the BOOT button before 10 s cancels, and the reset only fires after the full hold. But nothing is drawn during the hold, so the user gets no visual warning. This is a genuine open gap, not a deliberate trade-off. |
 | 10 | §12.2 | Continuous-wrap scrolling only; no pause-and-reverse mode. | v1.0 offered both and stated a preference for continuous wrap. `SCROLL_END_PAUSE_MS` is vestigial. |
@@ -728,10 +728,7 @@ This survives CA rotation, which a single pinned certificate does not — a pinn
 ```
 
 **As-built (§0.1 #4): the cap is 96 KB, not 48 KB.** v1.0's 48 KB was an estimate against an
-assumed 150–190 KB heap. In practice a real 300 px-tier cover from the CDN measured
-**60,378 bytes** — over the cap, so every track fell through to the placeholder tile.
-On-device `/healthz` reported ~150 KB free at that moment, so 96 KB keeps the margin v1.0
-was reasoning about while accommodating sizes actually observed. §15's budget row and F10
+assumed 150–190 KB heap. In practice a representative 300 px-tier cover from the CDN is about 60 KB — over the cap, so every track fell through to the placeholder tile. Free heap is typically ~150 KB, so 96 KB keeps the margin v1.0 was reasoning about while accommodating sizes actually observed. §15's budget row and F10
 are updated to match.
 
 `setJpgScale` only **downscales** (1, 2, 4, 8). This is why the 300 px image is fetched rather than the 64 px one: 300÷2 = 150, cropped to 135, is sharp. Upscaling 64→135 is visibly blocky.
@@ -882,12 +879,12 @@ alongside the fields above. It also accepts `orientation`; changing that value r
 `last_art_len`, `last_art_decode_ok`, `last_art_connect_ok`, `last_art_send_ok`,
 `last_art_http_status`, `last_art_content_length`). These exist because **opening the serial
 port on this board asserts DTR/RTS and resets it**, so serial is unusable for observing a
-live fault — during bring-up that behaviour also manufactured a false "stuck on Connecting
+live fault — that behaviour can also manufacture a false "stuck on Connecting
 to WiFi" symptom. HTTP is the only practical diagnostic channel. None of these fields is a
 secret and §13.3 is unaffected. `/healthz` is deliberately unauthenticated, so it must
 remain LAN-only like the rest of the device.
 
-**Added 2 Aug 2026, prompted by the F16 Safe Mode display bug (§14):**
+**Diagnostic fields added in v1.1 (see the F16 Safe Mode display bug, §14):**
 
 | Field | Meaning |
 |---|---|
@@ -943,7 +940,7 @@ The device sits on a trusted home LAN, but "trusted" is not "unauthenticated".
 
 **F16 is the safety net for §6.3(b).** A crash loop that also polls Spotify on every boot is the realistic path to getting the client blocked. Safe mode must engage before that can accumulate.
 
-**As-built bug, found and fixed 2 Aug 2026:** the "Safe mode" screen text this table promises was not actually reachable. `main.cpp`'s safe-mode branch set `AppState::SAFE_MODE` and then immediately called `WifiMgr::begin()`, whose first statement unconditionally sets `AppState::WIFI_INIT` — silently clobbering the state just set, with nothing restoring it afterward. A device that had correctly entered Safe Mode (WiFi connected, web UI serving, no Spotify traffic) displayed "Connecting to WiFi..." forever instead, on both the TFT and `/healthz`. Fixed by moving the `setState(AppState::SAFE_MODE)` call to *after* `WifiMgr::begin()` returns. See §0.1 #7 for the related `/healthz` field additions this incident prompted.
+**As-built bug (fixed):** the "Safe mode" screen text this table promises was not actually reachable. `main.cpp`'s safe-mode branch set `AppState::SAFE_MODE` and then immediately called `WifiMgr::begin()`, whose first statement unconditionally sets `AppState::WIFI_INIT` — silently clobbering the state just set, with nothing restoring it afterward. A device that had correctly entered Safe Mode (WiFi connected, web UI serving, no Spotify traffic) displayed "Connecting to WiFi..." forever instead, on both the TFT and `/healthz`. Fixed by moving the `setState(AppState::SAFE_MODE)` call to *after* `WifiMgr::begin()` returns. See §0.1 #7 for the related `/healthz` field additions.
 
 ---
 
