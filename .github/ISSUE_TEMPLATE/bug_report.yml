@@ -1,0 +1,66 @@
+name: Bug report
+description: The firmware or dashboard isn't behaving as documented
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before anything else: **`docs/DESIGN_SPEC.md` §0.1 lists the places the firmware
+        knowingly deviates from its design**, including one requirement that isn't
+        implemented. Worth a look — what you're seeing may already be documented.
+
+        Two known gotchas that account for a lot of first-build problems:
+        - A blank or white screen almost always means the display pin mapping is wrong
+          for your board. See §2.2 — the widely-copied LilyGO T-Display pinout does
+          **not** work here.
+        - Transport controls need Spotify **Premium**. The API returns 403 on Free
+          accounts and the firmware disables the controls.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens, and what did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: healthz
+    attributes:
+      label: Output of http://ideaspeak.local/healthz
+      description: |
+        This is the most useful thing you can include. Paste the whole JSON response.
+
+        Please **don't** open a serial monitor to gather logs instead — on this board
+        that asserts DTR/RTS and **resets the device**, which will hide the fault
+        you're trying to report (and can invent a fake one). `/healthz` exists
+        precisely so you don't have to.
+      render: json
+    validations:
+      required: false
+
+  - type: input
+    id: board
+    attributes:
+      label: Board
+      placeholder: ideaspark ESP32 with built-in 1.14" ST7789, or whatever you're using
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: PlatformIO / platform version
+      description: Output of `pio --version`, plus the `platform` line from your platformio.ini if you changed it.
+      placeholder: PlatformIO Core 6.1.x, espressif32@6.13.0
+    validations:
+      required: false
+
+  - type: textarea
+    id: build
+    attributes:
+      label: Build output, if it fails to compile or link
+      description: The error itself plus a few lines of context is plenty — no need for the whole log.
+      render: shell
+    validations:
+      required: false
